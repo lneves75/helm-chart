@@ -1,0 +1,126 @@
+{{- if (.Values.deployment).enabled }}
+apiVersion: apps/v1
+kind: Deployment
+{{- include "lib.metadata" . }}
+  {{- with (.Values.deployment).annotations }}
+  annotations:
+  {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  progressDeadlineSeconds: {{ (.Values.deployment).progressDeadlineSeconds | default 600 }}
+  {{- if not (.Values.autoscaling).enabled }}
+  replicas: {{ (.Values.deployment).replicas | default 1 }}
+  {{- end }}
+  revisionHistoryLimit: {{ (.Values.deployment).revisionHistoryLimit | default 3 }}
+  {{- if not (.Values.deployment).headless }}
+  selector:
+    matchLabels:
+      {{- include "lib.selectorLabels" . | nindent 6 }}
+  {{- end }}
+  {{- with (.Values.deployment).strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      {{- with (.Values.deployment).podAnnotations }}
+      annotations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "lib.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "lib.serviceAccountName" . }}
+      containers:
+      - name: {{ include "lib.instanceName" . }}
+        image: {{ printf "%s:%s" (.Values.image).repository (.Values.image).tag }}
+        {{- /* image command */}}
+        {{- with (.Values.deployment).command }}
+        command:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- /* container ports */}}
+        {{- with (.Values.deployment).ports }}
+        ports:
+        {{- range . }}
+        {{- range $name, $port := . }}
+        - containerPort: {{ $port.container }}
+          name: {{ $name }}
+          protocol: TCP
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- /* environment variables */}}
+        {{- if coalesce false (.Values.deployment).environmentVariables .Values.environmentVariables }}
+        {{- include "lib.environmentVariables" (mergeOverwrite (.Values.environmentVariables | default dict) ((.Values.deployment).environmentVariables) | default dict) | nindent 8 }}
+        {{- end }}
+        {{- /* environment variables from Secrets */}}
+        {{- if coalesce false (.Values.externalSecret).enabled (.Values.deployment).envFrom }}
+        envFrom:
+        {{- if (.Values.externalSecret).enabled }}
+          - secretRef:
+              name: {{ include "lib.instanceName" .}}
+        {{- end }}
+        {{- with (.Values.deployment).envFrom }}
+        {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- end }}
+        {{- /* probes */}}
+        {{- with (.Values.deployment).probes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- /* resource limits */}}
+        resources:
+        {{- $resources := .Values.resources | default dict }}
+        {{- if $resources }}
+          requests:
+            cpu: {{  $resources.requests.cpu | default "0.5" | quote }}
+            memory: {{ $resources.requests.memory | default "500Mi" | quote }}
+          limits:
+            cpu: {{ $resources.limits.cpu | default "1" | quote }}
+            memory: {{ $resources.limits.memory | default "1Gi" | quote }}
+        {{- else }}
+          requests:
+            cpu: "0.5"
+            memory: "500Mi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+        {{- end }}
+        {{- /* volumeMounts */}}
+        {{- with (.Values.deployment).volumeMounts }}
+        volumeMounts:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- /* affinity */}}
+      {{- with (.Values.deployment).affinity }}
+      affinity:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- /* node selector */}}
+      {{- with (.Values.deployment).nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- /* security context */}}
+      {{- with (.Values.deployment).securityContext }}
+      securityContext:
+        {{- if .id }}
+        runAsNonRoot: true
+        runAsUser: {{ .id }}
+        runAsGroup: {{ .id }}
+        {{- else }}
+        {{- toYaml . | nindent 6 }}
+        {{- end }}
+      {{- end }}
+      {{- /* tolerations */}}
+      {{- with (.Values.deployment).tolerations }}
+      tolerations:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- /* volumes */}}
+      {{- with (.Values.deployment).volumes }}
+      volumes:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+{{- end }}

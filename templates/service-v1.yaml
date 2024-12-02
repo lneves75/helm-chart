@@ -1,0 +1,22 @@
+{{- if and (.Values.service).enabled (.Values.deployment).ports }}
+apiVersion: v1
+kind: Service
+{{- include "lib.metadata" . }}
+  {{- with (.Values.service).annotations }}
+  annotations:
+  {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+  {{- range (.Values.deployment).ports }}
+  {{- range $name, $port := . }}
+  - port: {{ ($port).service | default 80 }}
+    name: {{ $name }}
+    targetPort: {{ $name }}
+    protocol: TCP
+  {{- end }}
+  {{- end }}
+  selector:
+  {{- include "lib.selectorLabels" . | nindent 4 }}
+{{- end }}
