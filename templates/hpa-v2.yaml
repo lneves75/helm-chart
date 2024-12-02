@@ -1,0 +1,29 @@
+{{- if and (.Values.autoscaling).enabled (.Values.deployment).enabled (coalesce false (.Values.autoscaling).targetCPUUtilizationPercentage (.Values.autoscaling).targetMemoryUtilizationPercentage) }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+{{- include "lib.metadata" . }}
+spec:
+  scaleTargetRef:
+    apiVersion: {{ .Values.apiVersion | default "apps/v1" }}
+    kind: {{ .Values.kind | default "Deployment" }}
+    name: {{ include "lib.instanceName" . }}
+  minReplicas: {{ (.Values.autoscaling).minReplicas | default 1 }}
+  maxReplicas: {{ (.Values.autoscaling).maxReplicas | default 3 }}
+  metrics:
+  {{- if (.Values.autoscaling).targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ (.Values.autoscaling).targetCPUUtilizationPercentage }}
+  {{- end }}
+  {{- if (.Values.autoscaling).targetMemoryUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ (.Values.autoscaling).targetMemoryUtilizationPercentage }}
+  {{- end }}
+{{- end }}

@@ -1,20 +1,12 @@
-{{/*
-Expand the name of the chart.
-*/}}
-{{- define "helm-chart.name" -}}
-{{- default .Release.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- define "lib.name" -}}
+{{- .Values.fullnameOverride | default .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{/*
-Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
-*/}}
-{{- define "helm-chart.fullname" -}}
+{{- define "lib.instanceName" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- $name := default .Release.Name .Values.nameOverride }}
+{{- $name := .Values.instanceName | default .Release.Name }}
 {{- if contains $name .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -23,38 +15,49 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 {{- end }}
 
-{{/*
-Create chart name and version as used by the chart label.
-*/}}
-{{- define "helm-chart.chart" -}}
+{{- define "lib.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "helm-chart.labels" -}}
-helm.sh/chart: {{ include "helm-chart.chart" . }}
-{{ include "helm-chart.selectorLabels" . }}
-app.kubernetes.io/version: {{ .Values.image.tag | quote }}
+{{- define "lib.labels" -}}
+helm.sh/chart: {{ include "lib.chart" . }}
+{{ include "lib.selectorLabels" . }}
+app.kubernetes.io/version: {{ (.Values.image).tag | default "latest" | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
 Selector labels
 */}}
-{{- define "helm-chart.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "helm-chart.name" . }}
-app.kubernetes.io/instance: {{ include "helm-chart.fullname" . }}
+{{- define "lib.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "lib.name" . }}
+app.kubernetes.io/instance: {{ include "lib.instanceName" . }}
 {{- end }}
 
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "helm-chart.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "helm-chart.fullname" .) .Values.serviceAccount.name }}
+{{- define "lib.environmentVariables" }}
+{{- "env:" }}
+{{- range $name, $value := . }}
+- name: {{ $name }}
+  value: {{ $value }}
+{{- end }}
+{{- end }}
+
+{{- define "lib.ports" }}
+{{- "ports:" }}
+{{- range $name, $port := . }}
+- containerPort: {{ $port }}
+  name: {{ $name }}
+  protocol: TCP
+{{- end }}
+{{- end }}
+
+{{- define "lib.serviceAccountName" -}}
+{{- if (.Values.serviceAccount).enabled }}
+{{- (.Values.serviceAccount).name | default (include "lib.instanceName" .) }}
 {{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{- "default" }}
 {{- end }}
 {{- end }}

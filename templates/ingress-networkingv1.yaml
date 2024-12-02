@@ -1,0 +1,27 @@
+{{- if and (.Values.ingress).enabled }}
+{{- $serviceName := include "lib.name" . }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+{{- include "lib.metadata" . }}
+  {{- with (.Values.ingress).annotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className | default "nginx" }}
+  rules:
+  {{- range (.Values.ingress).hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+        {{- range .paths }}
+          - path: {{ .path }}
+            type: {{ .type | default "Prefix" }}
+            backend:
+              service:
+                name: {{ .serviceName | default $serviceName }}
+                port:
+                  name: {{ .servicePort | default "http" }}
+        {{- end }}
+  {{- end }}
+{{- end }}
