@@ -45,15 +45,6 @@ app.kubernetes.io/instance: {{ include "lib.instanceName" . }}
 {{- end }}
 {{- end }}
 
-{{- define "lib.ports" }}
-{{- "ports:" }}
-{{- range $name, $port := . }}
-- containerPort: {{ $port }}
-  name: {{ $name }}
-  protocol: TCP
-{{- end }}
-{{- end }}
-
 {{- define "lib.serviceAccountName" -}}
 {{- if (.Values.serviceAccount).enabled }}
 {{- (.Values.serviceAccount).name | default (include "lib.instanceName" .) }}

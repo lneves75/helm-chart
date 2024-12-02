@@ -41,15 +41,18 @@ spec:
         {{- end }}
         {{- /* container ports */}}
         {{- with (.Values.deployment).ports }}
-        {{- include "lib.ports" . | nindent 8 }}
+        ports:
+        {{- range . }}
+        {{- range $name, $port := . }}
+        - containerPort: {{ $port.container }}
+          name: {{ $name }}
+          protocol: TCP
+        {{- end }}
+        {{- end }}
         {{- end }}
         {{- /* environment variables */}}
-        {{- if and (.Values.deployment).environmentVariables .Values.environmentVariables }}
-        {{- include "lib.environmentVariables" (mergeOverwrite .Values.environmentVariables (.Values.deployment).environmentVariables) | nindent 8 }}
-        {{- else if .Values.environmentVariables }}
-        {{- include "lib.environmentVariables" .Values.environmentVariables | nindent 8 }}
-        {{- else }}
-        {{- include "lib.environmentVariables" (.Values.deployment).environmentVariables | nindent 8 }}
+        {{- if coalesce false (.Values.deployment).environmentVariables .Values.environmentVariables }}
+        {{- include "lib.environmentVariables" (mergeOverwrite (.Values.environmentVariables | default dict) ((.Values.deployment).environmentVariables) | default dict) | nindent 8 }}
         {{- end }}
         {{- /* environment variables from Secrets */}}
         {{- if coalesce false (.Values.externalSecret).enabled (.Values.deployment).envFrom }}

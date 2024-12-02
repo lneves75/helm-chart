@@ -9,11 +9,13 @@ kind: Service
 spec:
   type: ClusterIP
   ports:
-  {{- range $name, $port := (.Values.deployment).ports }}
-  - name: {{ $name }}
-    port: {{ $port }}
+  {{- range (.Values.deployment).ports }}
+  {{- range $name, $port := . }}
+  - port: {{ ($port).service | default 80 }}
+    name: {{ $name }}
     targetPort: {{ $name }}
     protocol: TCP
+  {{- end }}
   {{- end }}
   selector:
   {{- include "lib.selectorLabels" . | nindent 4 }}
