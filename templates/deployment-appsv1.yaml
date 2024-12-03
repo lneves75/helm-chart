@@ -8,7 +8,7 @@ kind: Deployment
   {{- end }}
 spec:
   progressDeadlineSeconds: {{ (.Values.deployment).progressDeadlineSeconds | default 600 }}
-  {{- if not (.Values.autoscaling).enabled }}
+  {{- if not (.Values.autoscaling.hpa).enabled }}
   replicas: {{ (.Values.deployment).replicas | default 1 }}
   {{- end }}
   revisionHistoryLimit: {{ (.Values.deployment).revisionHistoryLimit | default 3 }}
